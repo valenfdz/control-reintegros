@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Control de Reintegros</title>
+
+<style>
+body {
+  font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+  background: #FAEAF5;
+  padding: 20px;
+}
+
+h1 {
+  text-align: center;
+}
+
+.container {
+  max-width: 500px;
+  margin: auto;
+  background: white;
+  padding: 20px;
+  border-radius: 16px;
+  box-shadow: 0px 6px 15px rgba(0,0,0,0.1);
+  box-sizing: border-box;
+}
+
+select, input, button {
+  width: 100%;
+  padding: 12px;
+  margin-top: 10px;
+  border-radius: 10px;
+  border: 1px solid #ccc;
+  font-size: 16px;
+  box-sizing: border-box;
+}
+
+button {
+  background: #E17ABF;
+  color: white;
+  font-weight: bold;
+  cursor: pointer;
+  border: none;
+}
+
+button:hover {
+  opacity: 0.9;
+}
+
+.categoria {
+  margin-top: 20px;
+  padding: 12px;
+  border-radius: 10px;
+  background: #f0f0f0;
+}
+
+.disponible {
+  color: green;
+  font-weight: bold;
+}
+
+.alerta {
+  color: red;
+  font-weight: bold;
+}
+</style>
+</head>
+
+<body>
+
+<h1>💳 Control de Reintegros</h1>
+
+<div class="container">
+
+<select id="categoria">
+  <option value="combustible">Combustible</option>
+  <option value="supermercado">Supermercados</option>
+  <option value="bares">Bares</option>
+  <option value="farmacia">Farmacia / Cine</option>
+</select>
+
+<input type="text" id="monto" placeholder="Monto reintegrado (Gs)">
+
+<button onclick="agregar()">Agregar reintegro</button>
+
+<div id="resumen"></div>
+
+<button onclick="resetear()" style="background:#e74c3c; margin-top:20px;">
+Resetear todo
+</button>
+
+</div>
+
+<script>
+const topes = {
+  combustible: 200000,
+  supermercado: 200000,
+  bares: 100000,
+  farmacia: 100000
+};
+
+// 🔹 Porcentaje de reintegro
+const porcentajes = {
+  combustible: 0.5,
+  supermercado: 0.5,
+  bares: 0.5,
+  farmacia: 1
+};
+
+let usados = JSON.parse(localStorage.getItem("usados")) || {
+  combustible: 0,
+  supermercado: 0,
+  bares: 0,
+  farmacia: 0
+};
+
+// 🔹 Formatear con puntos automáticamente
+document.getElementById("monto").addEventListener("input", function(e) {
+  let valor = e.target.value.replace(/\D/g, "");
+  valor = Number(valor).toLocaleString("es-PY");
+  e.target.value = valor;
+});
+
+function agregar() {
+  const categoria = document.getElementById("categoria").value;
+  let montoTexto = document.getElementById("monto").value.replace(/\./g, "");
+  const monto = Number(montoTexto);
+
+  if (!monto || monto <= 0) {
+    alert("Ingresá un monto válido");
+    return;
+  }
+
+  if (usados[categoria] + monto > topes[categoria]) {
+    alert("🚨 Superás el tope de esta categoría");
+    return;
+  }
+
+  usados[categoria] += monto;
+  localStorage.setItem("usados", JSON.stringify(usados));
+  document.getElementById("monto").value = "";
+  mostrar();
+}
+
+function mostrar() {
+  let html = "";
+
+  for (let cat in topes) {
+
+    let disponible = topes[cat] - usados[cat];
+    let porcentaje = porcentajes[cat];
+
+    // 🧮 Cálculo de cuánto puede gastar aún
+    let gastoPosible = disponible / porcentaje;
+
+    html += `
+      <div class="categoria">
+        <strong>${cat.toUpperCase()}</strong><br>
+        Usado: ${usados[cat].toLocaleString("es-PY")} Gs<br>
+        Disponible: <span class="${disponible < 20000 ? 'alerta' : 'disponible'}">
+        ${disponible.toLocaleString("es-PY")} Gs
+        </span><br>
+        <span style="color:#555;">
+        Podés gastar hasta: 
+        <strong>${gastoPosible.toLocaleString("es-PY")} Gs</strong>
+        </span>
+      </div>
+    `;
+  }
+
+  document.getElementById("resumen").innerHTML = html;
+}
+
+function resetear() {
+  if (confirm("¿Seguro querés borrar todos los datos?")) {
+    localStorage.removeItem("usados");
+    usados = {
+      combustible: 0,
+      supermercado: 0,
+      bares: 0,
+      farmacia: 0
+    };
+    mostrar();
+  }
+}
+
+mostrar();
+</script>
+
+</body>
+</html>
